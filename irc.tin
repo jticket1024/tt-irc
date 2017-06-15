@@ -1,75 +1,118 @@
-#alias {^/{j|jo|joi|join} %s%S$}
+#action {^:%1 = %2 :%3}
 {
-#variable {CHANNEL} {%3};
-#send {JOIN %3}
+#if {"%1" != "PRIVMSG{.*}"}
+{
+#variable {i} {%3};
+#replace {i} {~} {};
+#replace {i} {@} {};
+#replace {i} { } {;};
+#forall {$i} {#tab {&0: }}
 }
-{8}
+}
+{9}
 
-#alias {%*}
+#event {RECEIVED LINE}
 {
-#nop {All other aliases should be 8 or lower.};
-#if {&{CHANNEL}}
+#if {"%0" != "PING{.*}"}
 {
-#send {PRIVMSG ${CHANNEL} :%0}
+#variable {timeStamp.newText} {%0}
+}
+}
+
+#event {SECOND}
+{
+#if {%4 > 12}
+{
+#math {timeStamp.newTime} {%4 - 12};
+#variable {timeStamp.newTime} {${timeStamp.newTime}:%5AM}
 };
 #else
 {
-#send {%0}
+#variable {timeStamp.newTime} {%4};
+#variable {timeStamp.newTime} {${timeStamp.newTime}:%5PM}
+};
+#if {"${timeStamp.oldText}" != "${timeStamp.newText}"}
+{
+#variable {timeStamp.oldText} {${timeStamp.newText}};
+};
+#if {!&{timeStamp.oldTime}}
+{
+#variable {timeStamp.oldTime} {${timeStamp.newTime}}
+};
+#if {${timeStamp.newTime} != ${timeStamp.oldTime}}
+{
+#variable {timeStamp.oldTime} {${timeStamp.newTime}};
+#echo {${timeStamp.newTime}}
 }
+}
+
+#ACTION {^PING%*}
+{
+	#variable {output} {%0};
+	#replace {output} {I} {O};
+	#send {$output};
+	#line {gag}
 }
 {9}
 
-#action {^PING%*}
+#ALIAS {^/{co|con|conn|conne|connec|connect} %s%S %s%d$}
 {
-#variable {output} {%0};
-#replace {output} {I} {O};
-#send {$output};
-#line {gag}
+	#nop {connect without ssl. To use ssl, prefix the port with a +};
+	#variable {SERVER} {%3};
+	#session {%3} {%3} {%5}
+}
+{8}
+
+#ALIAS {^/{co|con|conn|conne|connec|connect} %s%S %s+%d$}
+{
+	#nop {Connect using ssl.};
+	#variable {SERVER} {%3};
+	#ssl {%3} {%3} {%5}
+}
+{8}
+
+#ALIAS {^/{j|jo|joi|join} %s%S$}
+{
+	#variable {CHANNEL} {%3};
+	#send {JOIN %3}
+}
+{8}
+
+#ALIAS {%*}
+{
+	#nop {All other aliases should be 8 or lower.};
+	#if {&{CHANNEL}}
+	{
+		#send {PRIVMSG ${CHANNEL} :%0};
+		#echo {${settings.nick}: %0}
+	};
+	#else
+	{
+		#send {%0}
+	}
 }
 {9}
 
-#alias {^/{co|con|conn|conne|connec|connect} %s%S %s+%d$}
-{
-#nop {Connect using ssl.};
-#variable {SERVER} {%3};
-#ssl {%3} {%3} {%5}
-}
-{8}
-
-#alias {^/{co|con|conn|conne|connec|connect} %s%S %s%d$}
-{
-#nop {connect without ssl. To use ssl, prefix the port with a +};
-#variable {SERVER} {%3};
-#session {%3} {%3} {%5}
-}
-{8}
-
-#EVENT {RECEIVED INPUT}
-{
-	#list {game.inputHistory} {add} {%0}
-}
-
-#event {SESSION CONNECTED}
-{
-#nop {Set default nick and user info.};
-#if {!&{settings.nick}}
-{
-#variable {settings.nick} {tt-irc-user}
-};
-#if {!&{settings.user}}
-{
-#variable {settings.user} {tt-irc-user}
-};
-#if {!&{settings.name}}
-{
-#variable {settings.name} {${settings.nick}}
-};
-#nop {register with the server};
-NICK ${settings.nick};
-#send {#echo {USER ${settings.user} ${HOSTNAME} ${SERVER} :${settings.name}}};
-#send {USER ${settings.user} ${HOSTNAME} ${SERVER} :${settings.name}}
-}
-
+#CONFIG           {256 COLORS}  {OFF}
+#CONFIG           {AUTO TAB}  {5000}
+#CONFIG           {BUFFER SIZE}  {20000}
+#CONFIG           {CHARSET}  {ASCII}
+#CONFIG           {COLOR PATCH}  {OFF}
+#CONFIG           {COMMAND COLOR}  {<078>}
+#CONFIG           {COMMAND ECHO}  {ON}
+#CONFIG           {CONNECT RETRY}  {0}
+#CONFIG           {HISTORY SIZE}  {1000}
+#CONFIG           {LOG}  {RAW}
+#CONFIG           {PACKET PATCH}  {0.00}
+#CONFIG           {REPEAT CHAR}  {!}
+#CONFIG           {REPEAT ENTER}  {OFF}
+#CONFIG           {SCROLL LOCK}  {ON}
+#CONFIG           {SPEEDWALK}  {OFF}
+#CONFIG           {TINTIN CHAR}  {#}
+#CONFIG           {VERBATIM}  {OFF}
+#CONFIG           {VERBATIM CHAR}  {\}
+#CONFIG           {VERBOSE}  {OFF}
+#CONFIG           {WORDWRAP}  {ON}
 #EVENT {PROGRAM START}
 {
 	#nop {Set the home directory variable.};
@@ -82,9 +125,35 @@ NICK ${settings.nick};
 	#nop {Find out if we have a display or not};
 	#script {GUI} {if [ -n "$DISPLAY" ]; then echo "true";else echo "false";fi};
 	#variable {GUI} {${GUI[1]}};
-#nop {Get the host name};
-#script {HOSTNAME} {echo "$HOSTNAME"};
-#variable {HOSTNAME} {${HOSTNAME[1]}}
+	#nop {Get the host name};
+	#script {HOSTNAME} {echo "$HOSTNAME"};
+	#variable {HOSTNAME} {${HOSTNAME[1]}}
+}
+
+#EVENT {RECEIVED INPUT}
+{
+	#list {game.inputHistory} {add} {%0}
+}
+
+#EVENT {SESSION CONNECTED}
+{
+	#nop {Set default nick and user info.};
+	#if {!&{settings.nick}}
+	{
+		#variable {settings.nick} {tt-irc-user}
+	};
+	#if {!&{settings.user}}
+	{
+		#variable {settings.user} {tt-irc-user}
+	};
+	#if {!&{settings.name}}
+	{
+		#variable {settings.name} {${settings.nick}}
+	};
+	#nop {register with the server};
+	NICK ${settings.nick};
+	#send {#echo {USER ${settings.user} ${HOSTNAME} ${SERVER} :${settings.name}}};
+	#send {USER ${settings.user} ${HOSTNAME} ${SERVER} :${settings.name}}
 }
 
 #EVENT {SESSION DISCONNECTED}
@@ -92,6 +161,9 @@ NICK ${settings.nick};
 	#end
 }
 
-#variable {i}
-#variable {output}
-#substitute {^:%S!%2 %3 :%4} {%1: %4} {1}
+#SUBSTITUTE       {^:%S!%2 %3 :%4}  {%1: %4}  {1}
+#TAB              {/connect}
+#TAB              {/join}
+#VARIABLE         {i}  {}
+#VARIABLE         {output}  {}
+#VARIABLE         {timeStamp}  {}
