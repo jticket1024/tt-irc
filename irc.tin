@@ -1,0 +1,97 @@
+#alias {^/{j|jo|joi|join} %s%S$}
+{
+#variable {CHANNEL} {%3};
+#send {JOIN %3}
+}
+{8}
+
+#alias {%*}
+{
+#nop {All other aliases should be 8 or lower.};
+#if {&{CHANNEL}}
+{
+#send {PRIVMSG ${CHANNEL} :%0}
+};
+#else
+{
+#send {%0}
+}
+}
+{9}
+
+#action {^PING%*}
+{
+#variable {output} {%0};
+#replace {output} {I} {O};
+#send {$output};
+#line {gag}
+}
+{9}
+
+#alias {^/{co|con|conn|conne|connec|connect} %s%S %s+%d$}
+{
+#nop {Connect using ssl.};
+#variable {SERVER} {%3};
+#ssl {%3} {%3} {%5}
+}
+{8}
+
+#alias {^/{co|con|conn|conne|connec|connect} %s%S %s%d$}
+{
+#nop {connect without ssl. To use ssl, prefix the port with a +};
+#variable {SERVER} {%3};
+#session {%3} {%3} {%5}
+}
+{8}
+
+#EVENT {RECEIVED INPUT}
+{
+	#list {game.inputHistory} {add} {%0}
+}
+
+#event {SESSION CONNECTED}
+{
+#nop {Set default nick and user info.};
+#if {!&{settings.nick}}
+{
+#variable {settings.nick} {tt-irc-user}
+};
+#if {!&{settings.user}}
+{
+#variable {settings.user} {tt-irc-user}
+};
+#if {!&{settings.name}}
+{
+#variable {settings.name} {${settings.nick}}
+};
+#nop {register with the server};
+NICK ${settings.nick};
+#send {#echo {USER ${settings.user} ${HOSTNAME} ${SERVER} :${settings.name}}};
+#send {USER ${settings.user} ${HOSTNAME} ${SERVER} :${settings.name}}
+}
+
+#EVENT {PROGRAM START}
+{
+	#nop {Set the home directory variable.};
+	#script {HOME} {if [ -z "$XDG_CONFIG_HOME" ] ; then if ! [ -d "$HOME/.config/tt-irc/" ] ; then mkdir -p "$HOME/.config/tt-irc";fi;echo -n "$HOME/.config/tt-irc";else if ! [ -d "$XDG_CONFIG_HOME/tt-irc/" ]; then mkdir -p "$XDG_CONFIG_HOME/tt-irc/";fi;echo -n "$XDG_CONFIG_HOME/tt-irc";fi};
+	#variable {HOME} {${HOME[1]}};
+	#replace {HOME} {-n } {};
+	#system {if [ ! -d "$HOME/sounds" ]; then mkdir -p "$HOME/sounds";fi};
+	#nop {Load plugins, if any.};
+	#script {if [ -d "plugins" ]; then for i in plugins/*.tin ; do echo "#class {$(basename "$i" ".tin")} {read} {$i}";done;fi};
+	#nop {Find out if we have a display or not};
+	#script {GUI} {if [ -n "$DISPLAY" ]; then echo "true";else echo "false";fi};
+	#variable {GUI} {${GUI[1]}};
+#nop {Get the host name};
+#script {HOSTNAME} {echo "$HOSTNAME"};
+#variable {HOSTNAME} {${HOSTNAME[1]}}
+}
+
+#EVENT {SESSION DISCONNECTED}
+{
+	#end
+}
+
+#variable {i}
+#variable {output}
+#substitute {^:%S!%2 %3 :%4} {%1: %4} {1}
