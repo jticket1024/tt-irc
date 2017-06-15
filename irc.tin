@@ -1,50 +1,15 @@
-#action {^:%1 = %2 :%3}
+#ACTION {^:%1 = %2 :%3}
 {
-#if {"%1" != "PRIVMSG{.*}"}
-{
-#variable {i} {%3};
-#replace {i} {~} {};
-#replace {i} {@} {};
-#replace {i} { } {;};
-#forall {$i} {#tab {&0: }}
-}
+	#if {"%1" != "PRIVMSG{.*}"}
+	{
+		#variable {i} {%3};
+		#replace {i} {~} {};
+		#replace {i} {@} {};
+		#replace {i} { } {;};
+		#forall {$i} {#tab {&0 }}
+	}
 }
 {9}
-
-#event {RECEIVED LINE}
-{
-#if {"%0" != "PING{.*}"}
-{
-#variable {timeStamp.newText} {%0}
-}
-}
-
-#event {SECOND}
-{
-#if {%4 > 12}
-{
-#math {timeStamp.newTime} {%4 - 12};
-#variable {timeStamp.newTime} {${timeStamp.newTime}:%5AM}
-};
-#else
-{
-#variable {timeStamp.newTime} {%4};
-#variable {timeStamp.newTime} {${timeStamp.newTime}:%5PM}
-};
-#if {"${timeStamp.oldText}" != "${timeStamp.newText}"}
-{
-#variable {timeStamp.oldText} {${timeStamp.newText}};
-};
-#if {!&{timeStamp.oldTime}}
-{
-#variable {timeStamp.oldTime} {${timeStamp.newTime}}
-};
-#if {${timeStamp.newTime} != ${timeStamp.oldTime}}
-{
-#variable {timeStamp.oldTime} {${timeStamp.newTime}};
-#echo {${timeStamp.newTime}}
-}
-}
 
 #ACTION {^PING%*}
 {
@@ -135,6 +100,38 @@
 	#list {game.inputHistory} {add} {%0}
 }
 
+#EVENT {RECEIVED LINE}
+{
+	#if {"%0" != "PING{.*}"}
+	{
+		#variable {timeStamp.newText} {%0}
+	}
+}
+
+#EVENT {SECOND}
+{
+	#if {%4 > 12}
+	{
+		#math {timeStamp.newTime} {%4 - 12};
+		#variable {timeStamp.newTime} {${timeStamp.newTime}:%5PM}
+	};
+	#else
+	{
+		#variable {timeStamp.newTime} {%4};
+		#variable {timeStamp.newTime} {${timeStamp.newTime}:%5AM}
+	};
+	#if {!&{timeStamp.oldTime}}
+	{
+		#variable {timeStamp.oldTime} {0}
+	};
+	#if {${timeStamp.newTime} != ${timeStamp.oldTime} && "${timeStamp.oldText}" != "${timeStamp.newText}"}
+	{
+		#echo {${timeStamp.newTime}};
+		#variable {timeStamp.oldText} {${timeStamp.newText}};
+		#variable {timeStamp.oldTime} {${timeStamp.newTime}}
+	}
+}
+
 #EVENT {SESSION CONNECTED}
 {
 	#nop {Set default nick and user info.};
@@ -161,6 +158,16 @@
 	#end
 }
 
+#PATHDIR          {d}  {u}  {32}
+#PATHDIR          {e}  {w}  {2}
+#PATHDIR          {n}  {s}  {1}
+#PATHDIR          {ne}  {sw}  {3}
+#PATHDIR          {nw}  {se}  {9}
+#PATHDIR          {s}  {n}  {4}
+#PATHDIR          {se}  {nw}  {6}
+#PATHDIR          {sw}  {ne}  {12}
+#PATHDIR          {u}  {d}  {16}
+#PATHDIR          {w}  {e}  {8}
 #SUBSTITUTE       {^:%S!%2 %3 :%4}  {%1: %4}  {1}
 #TAB              {/connect}
 #TAB              {/join}
