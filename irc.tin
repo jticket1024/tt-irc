@@ -11,6 +11,23 @@
 }
 {9}
 
+#ACTION {^:%S!%2 PRIVMSG %S :%4}
+{
+	#if {"%3" == "${settings.nick}"}
+	{
+		#variable {REPLY} {%1};
+		#list {messages.pm} {add} {<PM %1> %4};
+		#echo {\x3cPM %1\x3e %4}
+	};
+	#else
+	{
+		#list {messages.public} {add} {%1: %4};
+		#echo {%1: %4}
+	};
+	#line {gag}
+}
+{9}
+
 #ACTION {^PING%*}
 {
 	#variable {output} {%0};
@@ -19,6 +36,21 @@
 	#line {gag}
 }
 {9}
+
+#ALIAS {^/quit$}
+{
+	#send {QUIT :${settings.quitMessage}};
+	#end
+}
+{8}
+
+#ALIAS {^/{act|do|me} %2}
+{
+	#tab {/%1 };
+	#send {PRIVMSG $CHANNEL :\x01ACTION %2};
+	#echo { * ${settings.nick} %2}
+}
+{8}
 
 #ALIAS {^/{co|con|conn|conne|connec|connect} %s%S %s%d$}
 {
@@ -40,6 +72,36 @@
 {
 	#variable {CHANNEL} {%3};
 	#send {JOIN %3}
+}
+{8}
+
+#ALIAS {^/{msg|message} %s%S %4}
+{
+	#send {PRIVMSG %3 :%4}
+}
+{8}
+
+#ALIAS {^/{nic|nick} %s%S$}
+{
+	#class {settings} {open};
+	#variable {settings.nick} {%3};
+	#class {settings} {write} {${HOME}/config.tin};
+	#class {settings} {close};
+	#send {NICK ${settings.nick}};
+	#send {USER ${settings.user} ${HOSTNAME} ${SERVER} :${settings.name}}
+}
+{8}
+
+#ALIAS {^/{r|re|rep|repl|reply} %2}
+{
+	#if {&{REPLY}}
+	{
+		#send {PRIVMSG ${REPLY} :%2}
+	};
+	#else
+	{
+		#echo {You have no one to whom you can currently reply.}
+	}
 }
 {8}
 
@@ -83,6 +145,7 @@
 	#nop {Set the home directory variable.};
 	#script {HOME} {if [ -z "$XDG_CONFIG_HOME" ] ; then if ! [ -d "$HOME/.config/tt-irc/" ] ; then mkdir -p "$HOME/.config/tt-irc";fi;echo -n "$HOME/.config/tt-irc";else if ! [ -d "$XDG_CONFIG_HOME/tt-irc/" ]; then mkdir -p "$XDG_CONFIG_HOME/tt-irc/";fi;echo -n "$XDG_CONFIG_HOME/tt-irc";fi};
 	#variable {HOME} {${HOME[1]}};
+	#script {if [ -e "$HOME/config.tin" ]; then echo "#class {settings} {read} {$HOME/config.tin}";fi};
 	#replace {HOME} {-n } {};
 	#system {if [ ! -d "$HOME/sounds" ]; then mkdir -p "$HOME/sounds";fi};
 	#nop {Load plugins, if any.};
@@ -92,12 +155,27 @@
 	#variable {GUI} {${GUI[1]}};
 	#nop {Get the host name};
 	#script {HOSTNAME} {echo "$HOSTNAME"};
-	#variable {HOSTNAME} {${HOSTNAME[1]}}
-}
-
-#EVENT {RECEIVED INPUT}
-{
-	#list {game.inputHistory} {add} {%0}
+	#variable {HOSTNAME} {${HOSTNAME[1]}};
+	#nop {Set default nick and user info.};
+	#class {settings} {open};
+	#if {!&{settings.nick}}
+	{
+		#variable {settings.nick} {tt-irc-user}
+	};
+	#if {!&{settings.user}}
+	{
+		#variable {settings.user} {tt-irc-user}
+	};
+	#if {!&{settings.name}}
+	{
+		#variable {settings.name} {${settings.nick}}
+	};
+	#if {!&{settings.quitMessage}}
+	{
+		#variable {settings.quitMessage} {I ain't no quitter! Wait, maybe I am... Goodbye cruel IRC...}
+	};
+	#class {settings} {write} {${HOME}/config.tin};
+	#class {settings} {close}
 }
 
 #EVENT {RECEIVED LINE}
@@ -134,28 +212,9 @@
 
 #EVENT {SESSION CONNECTED}
 {
-	#nop {Set default nick and user info.};
-	#if {!&{settings.nick}}
-	{
-		#variable {settings.nick} {tt-irc-user}
-	};
-	#if {!&{settings.user}}
-	{
-		#variable {settings.user} {tt-irc-user}
-	};
-	#if {!&{settings.name}}
-	{
-		#variable {settings.name} {${settings.nick}}
-	};
 	#nop {register with the server};
-	NICK ${settings.nick};
-	#send {#echo {USER ${settings.user} ${HOSTNAME} ${SERVER} :${settings.name}}};
+	#send {NICK ${settings.nick}};
 	#send {USER ${settings.user} ${HOSTNAME} ${SERVER} :${settings.name}}
-}
-
-#EVENT {SESSION DISCONNECTED}
-{
-	#end
 }
 
 #PATHDIR          {d}  {u}  {32}
@@ -168,9 +227,8 @@
 #PATHDIR          {sw}  {ne}  {12}
 #PATHDIR          {u}  {d}  {16}
 #PATHDIR          {w}  {e}  {8}
-#SUBSTITUTE       {^:%S!%2 %3 :%4}  {%1: %4}  {1}
-#TAB              {/connect}
-#TAB              {/join}
-#VARIABLE         {i}  {}
-#VARIABLE         {output}  {}
-#VARIABLE         {timeStamp}  {}
+#SUBSTITUTE       {^:%S!%2 PRIVMSG #%3 :%4}     {%1: %4}  {1}
+#TAB              {/connect }
+#TAB              {/join }
+#TAB              {/msg }
+#TAB              {/reply }
