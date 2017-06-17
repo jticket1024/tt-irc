@@ -1,0 +1,47 @@
+#ALIAS {^/dar{t|t \s*\S+\s*}$}
+{
+	#list {parts} {add} {left ear;right ear;left eye;right eye;left cheek;right cheeknose;forehead;chest;stomach;crotch;left thy;right thy;left knee;right knee;left shin;right shin;left foot;right foot};
+	#list {parts} {size} {x};
+	#math {x} {1d$x};
+	#variable {x} {${parts[$x]}};
+	#if {"%0" == "/dart"}
+	{
+		#list {users} {size} {i};
+		#math {i} {1d$i};
+		#variable {target} {${users[$i]}}
+	};
+	#else
+	{
+		#regexp {%0} {{.*} {.*} {\s*}} {#list {users} {find} {&2} {i}};
+		#if {$i == 0}
+		{
+			#regexp {%0} {{.*} {.*}} {#list {users} {find} {&2} {i}}
+		};
+		#if {$i == 0}
+		{
+			#echo {No such person.};
+			#variable {target} {}
+		};
+		#else
+		{
+			#variable {target} {${users[$i]}}
+		}
+	};
+	#if {"$target" != ""}
+	{
+		#if {1d10 == 1}
+		{
+			/me throws a dart at $target but completely misses.
+		};
+		#else
+		{
+			/me hits $target in the $x with a well thrown dart!
+		}
+	}
+}
+{8}
+
+#VARIABLE         {i}  {0}
+#VARIABLE         {parts}  {}
+#VARIABLE         {target}  {}
+#VARIABLE         {x}  {0}
