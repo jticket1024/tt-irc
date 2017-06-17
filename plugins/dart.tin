@@ -1,6 +1,6 @@
 #ALIAS {^/dar{t|t \s*\S+\s*}$}
 {
-	#list {parts} {add} {left ear;right ear;left eye;right eye;left cheek;right cheeknose;forehead;chest;stomach;crotch;left thy;right thy;left knee;right knee;left shin;right shin;left foot;right foot};
+	#list {parts} {add} {left ear;right ear;left eye;right eye;left cheek;right cheek;nose;forehead;chest;stomach;crotch;left thigh;right thigh;left knee;right knee;left shin;right shin;left foot;right foot};
 	#list {parts} {size} {x};
 	#math {x} {1d$x};
 	#variable {x} {${parts[$x]}};
